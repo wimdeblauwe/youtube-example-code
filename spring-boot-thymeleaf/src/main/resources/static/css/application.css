@@ -1,0 +1,12 @@
+body {
+    font-family: 'Open Sans', sans-serif;
+}
+
+h1 {
+    font-family: 'Sedgwick Ave Display', cursive;
+    letter-spacing: 0.5rem;
+}
+
+.name {
+    color: chocolate;
+}
