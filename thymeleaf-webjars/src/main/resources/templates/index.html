@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans&family=Sedgwick+Ave+Display&display=swap"
+          rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/application.css}"/>
+    <script type="application/javascript" th:src="@{/webjars/alpinejs/dist/cdn.min.js}"></script>
+</head>
+<body>
+<h1>Hello Thymeleaf</h1>
+<div th:text="${name}" class="name"></div>
+<div x-data="{ open: false }">
+    <div @click="open = !open">Click here to show the list of movies</div>
+    <div x-show="open">
+        <ul>
+            <li th:each="movie : ${favoriteMovies}" th:text="${movie}"></li>
+        </ul>
+    </div>
+</div>
+</body>
+</html>
