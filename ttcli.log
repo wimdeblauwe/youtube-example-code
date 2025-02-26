@@ -1,0 +1,7 @@
+2025-02-26T20:14:33.165+01:00  INFO 89886 --- [main] i.g.w.t.TamingThymeleafCliApplication    : Starting AOT-processed TamingThymeleafCliApplication using Java 23.0.2 with PID 89886 (/opt/homebrew/Cellar/ttcli/1.8.0/libexec/bin/ttcli started by wdb in /Users/wdb/Projects/wimdeblauwe/youtube-example-code)
+2025-02-26T20:14:33.165+01:00  INFO 89886 --- [main] i.g.w.t.TamingThymeleafCliApplication    : No active profile set, falling back to 1 default profile: "default"
+2025-02-26T20:14:33.327+01:00  INFO 89886 --- [main] i.g.w.t.TamingThymeleafCliApplication    : Started TamingThymeleafCliApplication in 0.179 seconds (process running for 0.203)
+2025-02-26T20:14:37.298+01:00  INFO 89934 --- [main] i.g.w.t.TamingThymeleafCliApplication    : Starting AOT-processed TamingThymeleafCliApplication using Java 23.0.2 with PID 89934 (/opt/homebrew/Cellar/ttcli/1.8.0/libexec/bin/ttcli started by wdb in /Users/wdb/Projects/wimdeblauwe/youtube-example-code)
+2025-02-26T20:14:37.298+01:00  INFO 89934 --- [main] i.g.w.t.TamingThymeleafCliApplication    : No active profile set, falling back to 1 default profile: "default"
+2025-02-26T20:14:37.447+01:00  INFO 89934 --- [main] i.g.w.t.TamingThymeleafCliApplication    : Started TamingThymeleafCliApplication in 0.158 seconds (process running for 0.169)
+2025-02-26T20:15:21.063+01:00  INFO 89934 --- [main] i.g.w.t.ProjectInitializationService     : Using init service io.github.wimdeblauwe.ttcli.livereload.vite.ViteLiveReloadInitService@45528b2a
