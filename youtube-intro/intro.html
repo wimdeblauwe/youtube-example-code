@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>YouTube Intro</title>
+<!--
+  YouTube intro, 1920x1080, in the style of wimdeblauwe.com.
+  Query params:
+    title        episode title; wrap words in *asterisks* to colour them copper
+    duration     total length in ms (default 5000); the last frame is held until then
+    nameSize     final name size in px (default 48); the photo scales along
+    headerLift   extra px between the header (photo + name) and the title (default 32)
+    titleShift   px the title sits below the exact centre of the frame (default 20)
+    render       when present, nothing plays by itself; render.mjs drives window.seek(ms)
+  Open the file directly in a browser to preview it live (click to replay).
+
+  Sizes are animated as width/height/font-size (not transform: scale) so Chrome
+  re-rasterizes text and photo every frame and they stay sharp.
+-->
+<style>
+  @font-face { font-family: "Barlow"; font-weight: 800; src: url("assets/fonts/barlow-800.woff2") format("woff2"); }
+
+  :root {
+    --navy: #13202f; --navy-soft: #1c2d40;
+    --copper: #c2702e; --copper-bright: #e08a4e;
+    --on-navy: #f0ece5;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--navy); }
+
+  #stage {
+    position: relative; width: 1920px; height: 1080px; overflow: hidden;
+    background: linear-gradient(115deg, var(--navy) 0%, var(--navy-soft) 70%, #27405a 100%);
+    font-family: "Barlow", sans-serif;
+  }
+  #glow { position: absolute; inset: 0; background: radial-gradient(ellipse 60% 90% at 80% 10%, rgba(224,138,78,.22), transparent 60%); }
+  /* fine static grain: dithers the gradients so the H.264 encode does not band */
+  #grain { position: absolute; inset: 0; opacity: .05; mix-blend-mode: overlay; pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+  #coin { position: absolute; width: 210px; height: 210px; }
+  #coin > div { position: absolute; inset: 0; }
+  #flare { position: absolute; inset: -160px !important; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,214,170,.85) 0%, rgba(224,138,78,.45) 22%, transparent 60%); opacity: 0; }
+  #front { display: grid; place-items: center; }
+  #front i { width: 150px; height: 150px; border-radius: 28px; background: var(--copper);
+    box-shadow: 0 0 110px 18px rgba(224,138,78,.35); }
+  #back { border-radius: 16%; opacity: 0; background: url("assets/portrait.jpg") center / cover; }
+
+  #name { position: absolute; transform: translateY(-50%); font-weight: 800; font-size: 134px; line-height: 1.05;
+    letter-spacing: -.035em; color: var(--on-navy); white-space: nowrap; padding-bottom: .06em; }
+  #bar { position: absolute; top: -6%; bottom: -6%; left: 0; width: 10px; border-radius: 5px; opacity: 0;
+    background: var(--copper-bright); box-shadow: 0 0 60px 10px rgba(224,138,78,.55); }
+
+  #title { position: absolute; left: 160px; width: 1600px; text-align: center;
+    font-weight: 800; letter-spacing: -.035em; line-height: 1.04; color: var(--on-navy); }
+  #title em { font-style: normal; color: var(--copper-bright); }
+  #title .w { display: inline-block; opacity: 0; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="glow"></div>
+  <div id="coin">
+    <div id="flare"></div>
+    <div id="front"><i></i></div>
+    <div id="back"></div>
+  </div>
+  <div id="name">Wim Deblauwe<div id="bar"></div></div>
+  <div id="title"></div>
+  <div id="grain"></div>
+</div>
+
+<script>
+(() => {
+  const params = new URLSearchParams(location.search);
+  const num = (key, fallback) => (params.has(key) ? Number(params.get(key)) : fallback);
+  const TITLE = params.get('title') || 'Form handling with *Thymeleaf*';
+  const DURATION = num('duration', 5000);
+  const NAME_SIZE = num('nameSize', 48);
+  const HEADER_LIFT = num('headerLift', 32);
+  const TITLE_SHIFT = num('titleShift', 20);
+  const RENDER = params.has('render');
+  const $ = (id) => document.getElementById(id);
+  const coin = $('coin'), front = $('front'), back = $('back'), nameEl = $('name'), titleEl = $('title');
+
+  // Title: one span per word so words can rise in staggered; *word* = copper
+  TITLE.split(/(\*[^*]+\*)/).filter(Boolean).forEach((part) => {
+    const copper = part.startsWith('*');
+    const text = copper ? part.slice(1, -1) : part;
+    text.split(/(\s+)/).forEach((tok) => {
+      if (!tok) return;
+      if (/^\s+$/.test(tok)) { titleEl.append(' '); return; }
+      const w = document.createElement('span');
+      w.className = 'w';
+      if (copper) { const em = document.createElement('em'); em.textContent = tok; w.append(em); }
+      else w.textContent = tok;
+      titleEl.append(w);
+    });
+  });
+
+  const ease = {
+    out: 'cubic-bezier(0.23, 1, 0.32, 1)',       // the blog's --ease-out
+    inOut: 'cubic-bezier(0.65, 0, 0.35, 1)',
+    in: 'cubic-bezier(0.55, 0, 1, 0.45)',
+  };
+  // fill 'both' holds the first keyframe before the start. A later animation on the same
+  // element must use 'forwards', otherwise it would override the earlier one before it starts.
+  const anim = (el, keyframes, start, dur, easing = ease.out, fill = 'both') =>
+    el.animate(keyframes, { delay: start, duration: dur, easing, fill });
+
+  // copper ring + shadow around the photo, proportional to its size
+  const ring = (s) => `0 0 0 ${(s * .038).toFixed(1)}px #13202f, 0 0 0 ${(s * .054).toFixed(1)}px #e08a4e, 0 ${(s * .19).toFixed(0)}px ${(s * .38).toFixed(0)}px -${(s * .19).toFixed(0)}px rgba(0,0,0,.6)`;
+  const box = (x, y, s) => ({ left: x + 'px', top: y + 'px', width: s + 'px', height: s + 'px' });
+
+  // Biggest font size at which the title fits in two lines (three as a last resort)
+  function fitTitle(maxSize) {
+    const lines = () => Math.round(titleEl.offsetHeight / (parseFloat(titleEl.style.fontSize) * 1.04));
+    let size = maxSize;
+    titleEl.style.fontSize = size + 'px';
+    while (lines() > 2 && size > maxSize * .7) titleEl.style.fontSize = (size -= 2) + 'px';
+    while (lines() > 3 && size > 56) titleEl.style.fontSize = (size -= 2) + 'px';
+    return titleEl.offsetHeight;
+  }
+
+  function build() {
+    // Lockup: photo (coin) + name, centred on the frame
+    const N0 = 134;                      // name font size in the lockup
+    const W0 = nameEl.offsetWidth;       // name width at N0
+    const C0 = 210, GAP0 = 60;
+    const L0 = (1920 - (C0 + GAP0 + W0)) / 2;
+    const coinX = L0, coinY = 540 - C0 / 2, nameX = L0 + C0 + GAP0;
+    Object.assign(coin.style, box(coinX, coinY, C0));
+    Object.assign(nameEl.style, { left: nameX + 'px', top: '540px' });
+    back.style.boxShadow = ring(C0);
+
+    // Final layout: title (just below the centre) with a small header (photo + name) above it
+    const N = NAME_SIZE, C = Math.round(N * 1.94), GAP = Math.round(N * .45);
+    const titleH = fitTitle(150);
+    const titleTop = 540 + TITLE_SHIFT - titleH / 2;
+    const headerTop = titleTop - Math.round(N * .9) - HEADER_LIFT - C;
+    const headerX = (1920 - (C + GAP + W0 * N / N0)) / 2;
+    titleEl.style.top = titleTop + 'px';
+
+    // 0 – 0.9s: corner glow breathes in
+    anim($('glow'), [{ opacity: 0 }, { opacity: 1 }], 0, 900, 'ease-out');
+
+    // 0 – 1.05s: diamond spins in at the centre, then slides left in front of the name
+    anim(front, [
+      { transform: 'perspective(1200px) rotateY(0deg) rotate(-315deg) scale(0)', opacity: 0, offset: 0 },
+      { opacity: 1, offset: .3 },
+      { transform: 'perspective(1200px) rotateY(0deg) rotate(45deg) scale(1)', opacity: 1, offset: 1 },
+    ], 0, 700);
+    anim(coin, [{ left: 960 - C0 / 2 + 'px' }, { left: coinX + 'px' }], 700, 350, ease.inOut);
+
+    // 1.0 – 1.7s: light bar sweeps out of the diamond and wipes the name in
+    anim(nameEl, [{ clipPath: 'inset(-20% 100% -20% -10px)' }, { clipPath: 'inset(-20% 0% -20% -10px)' }], 1000, 600, ease.inOut);
+    anim($('bar'), [
+      { transform: 'translateX(-30px)', opacity: 0 }, { opacity: 1, offset: .12 },
+      { opacity: 1, offset: .85 }, { transform: `translateX(${W0}px)`, opacity: 0 },
+    ], 1000, 700, ease.inOut);
+
+    // 1.75 – 2.55s: coin flip. Diamond turns edge-on, photo turns in and straightens 45° → 0°
+    anim(front, [
+      { transform: 'perspective(1200px) rotateY(0deg) rotate(45deg) scale(1)', opacity: 1 },
+      { transform: 'perspective(1200px) rotateY(90deg) rotate(45deg) scale(1)', opacity: 1, offset: .99 },
+      { transform: 'perspective(1200px) rotateY(90deg) rotate(45deg) scale(1)', opacity: 0 },
+    ], 1750, 200, ease.in, 'forwards');
+    anim(back, [
+      { transform: 'perspective(1200px) rotateY(-90deg) rotate(45deg) scale(.72)', opacity: 1 },
+      { transform: 'perspective(1200px) rotateY(0deg) rotate(0deg) scale(1)', opacity: 1 },
+    ], 1950, 280, ease.out);
+    anim($('flare'), [
+      { opacity: 0, transform: 'scale(.6)' }, { opacity: 1, transform: 'scale(1)', offset: .45 },
+      { opacity: 0, transform: 'scale(1.25)' },
+    ], 1720, 520, 'ease-out');
+    anim(coin, [{ transform: 'scale(1)' }, { transform: 'scale(1.06)', offset: .35 }, { transform: 'scale(1)' }],
+      2200, 360, 'ease-in-out', 'forwards');
+
+    // 2.6 – 3.35s: photo + name move up and shrink into the header …
+    anim(coin, [box(coinX, coinY, C0), box(headerX, headerTop, C)], 2600, 750, ease.inOut, 'forwards');
+    anim(back, [{ boxShadow: ring(C0) }, { boxShadow: ring(C) }], 2600, 750, ease.inOut, 'forwards');
+    anim(nameEl, [{ left: nameX + 'px', top: '540px', fontSize: N0 + 'px' },
+                  { left: headerX + C + GAP + 'px', top: headerTop + C / 2 + 'px', fontSize: N + 'px' }],
+      2600, 750, ease.inOut, 'forwards');
+
+    // … while the title words rise in from below, staggered (2.95s →)
+    [...titleEl.querySelectorAll('.w')].forEach((w, i) => {
+      anim(w, [{ transform: 'translateY(120px)', opacity: 0 }, { transform: 'translateY(0)', opacity: 1 }],
+        2950 + i * 55, 700, ease.out);
+    });
+  }
+
+  const all = () => document.getAnimations();
+  window.INTRO_DURATION = DURATION;
+  window.seek = (ms) => all().forEach((a) => { a.pause(); a.currentTime = ms; });
+
+  const portrait = new Image();
+  portrait.src = 'assets/portrait.jpg';
+  window.introReady = Promise.all([document.fonts.ready, portrait.decode()]).then(() => {
+    build();
+    if (RENDER) { window.seek(0); return; }
+    document.body.style.cursor = 'pointer';
+    document.body.addEventListener('click', () => all().forEach((a) => { a.currentTime = 0; a.play(); }));
+  });
+})();
+</script>
+</body>
+</html>
