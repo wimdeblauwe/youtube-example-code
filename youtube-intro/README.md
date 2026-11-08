@@ -51,9 +51,9 @@ Open `intro.html` directly in a browser to watch it live (click to replay). Add 
 
 - All timings are in the `build()` function in `intro.html`, as `anim(element, keyframes, startMs, durationMs, easing)` calls.
 - Colours and font are copied from the blog (`wimdeblauwe.com/assets/css/main.css`); the font is in `assets/fonts/`.
-- `assets/wim-deblauwe.jpg` is the full-resolution source photo; `assets/portrait.jpg` is the square crop the intro uses,
-  made with:
-  `ffmpeg -i assets/wim-deblauwe.jpg -vf "crop=2200:2200:1340:150,scale=1024:1024:flags=lanczos,unsharp=5:5:0.4" -q:v 2 assets/portrait.jpg`
+- `assets/portrait.jpg` is a 1024×1024 crop of a 4032×3024 photo (not in the repo), made with:
+  `ffmpeg -i <photo>.jpg -vf "crop=2200:2200:1340:150,scale=1024:1024:flags=lanczos,unsharp=5:5:0.4" -q:v 2 assets/portrait.jpg`
+  To swap the photo, make a square crop of at least 1024 px around the face and replace `portrait.jpg`.
 - Sizes are animated as width/height/font-size rather than `transform: scale`, so Chrome redraws text and photo sharply each frame.
 - The renderer pauses every Web Animation and seeks it to each frame's time (`window.seek(ms)`), so the result is
   identical on every run and independent of machine speed.
