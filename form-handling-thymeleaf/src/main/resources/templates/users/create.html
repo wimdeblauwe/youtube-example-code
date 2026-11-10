@@ -13,10 +13,16 @@
   <div>
     <label for="givenName">Given name</label>
     <input id="givenName" type="text" th:field="*{givenName}">
+    <p th:if="${#fields.hasErrors('givenName')}"
+       th:text="${#strings.listJoin(#fields.errors('givenName'), ', ')}"
+       class="validation-error"></p>
   </div>
   <div>
     <label for="familyName">Family name</label>
     <input id="familyName" type="text" th:field="*{familyName}">
+    <p th:if="${#fields.hasErrors('familyName')}"
+       th:text="${#strings.listJoin(#fields.errors('familyName'), ', ')}"
+    class="validation-error"></p>
   </div>
   <button type="submit">Create user</button>
 </form>
