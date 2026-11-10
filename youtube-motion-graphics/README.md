@@ -3,6 +3,8 @@
 Motion graphics for the YouTube videos, in the style of wimdeblauwe.com (navy, copper, Barlow, the copper diamond):
 
 - **The intro** (`intro.html`, `render.mjs`): the same 5-second intro for every episode, with the episode title. See below.
+- **The music and the final video** (`intro-music.mjs`, `add-music.mjs`): the intro and outro music, and the script
+  that puts intro, music and a Wrap export together. See [Music and final video](#music-and-final-video).
 - **Per-video graphics** in a directory named after the video's project, e.g. `form-handling-thymeleaf/`. See
   [Per-video graphics](#per-video-graphics).
 
@@ -65,6 +67,63 @@ Open `intro.html` directly in a browser to watch it live (click to replay). Add 
 - Sizes are animated as width/height/font-size rather than `transform: scale`, so Chrome redraws text and photo sharply each frame.
 - The renderer pauses every Web Animation and seeks it to each frame's time (`window.seek(ms)`), so the result is
   identical on every run and independent of machine speed.
+
+## Music and final video
+
+The intro and outro share one theme, a marimba arpeggio that builds up at 120 BPM so its accents fall on the intro
+animation (name wipe at 1.0 s, coin flip at 1.95 s, title at 3.0 s):
+
+- **Intro** (5 s): the build ends in an upward marimba strum when the title lands.
+- **Outro** (7.5 s): the same build, but the strum lands on a different chord (A) and then settles on a slow, low
+  downward strum on E.
+
+The music is synthesized in code by `intro-music.mjs` (pure Node, no samples), so there is nothing to license.
+
+### Make the final video for an episode
+
+Requires Node, ffmpeg and ffprobe.
+
+1. Export the video from Wrap, with chapters and captions as separate files.
+2. Look up when your last word ends in that export (for example in the `.srt`, or in the Wrap transcript).
+3. Run:
+
+   ```sh
+   node add-music.mjs \
+     --video "/Users/wdb/Movies/Wrap/<Project>.wrap/exports/<Name> - youtube.mp4" \
+     --intro out/intro-<slug>.mp4 \
+     --last-word 13:27.1
+   ```
+
+This writes `<Name> - youtube - with intro and music.mp4` next to the export (the export itself is not changed):
+
+- The intro is prepended, with the intro music.
+- The voice-over is brought to −14 LUFS, the level YouTube plays at. A Wrap export already peaks at 0 dBFS, so this is
+  done with a compressor and a limiter rather than with gain alone.
+- The outro music plays quietly under your last sentences; the final strum lands right after the last word, at full
+  level, and fades out with the video. Leave 2 seconds or more of video after the last word so it can ring out.
+- `.chapters.txt`, `.srt` and `.vtt` files next to the export are copied with all times moved by the length of the
+  intro (the first chapter stays at 0:00).
+- The whole video is re-encoded (H.264, CRF 17) to join the intro to it. This takes less than a minute.
+
+Options:
+
+| Option | Default | Meaning |
+|---|---|---|
+| `--video` | (required) | The Wrap export |
+| `--intro` | (required) | The intro made with `render.mjs` |
+| `--last-word` | | When the last word ends, in the export (`m:ss.s` or seconds). Without it there is no outro music |
+| `--out` | `<video> - with intro and music.mp4` | Output path |
+| `--voice-lufs` | `-14` | Loudness of the voice-over |
+| `--music-lufs` | `-17` | Loudness of the intro music and of the final strum of the outro |
+| `--outro-duck` | `12` | dB the outro music is lowered while you are still talking |
+| `--crf` | `17` | Video quality (lower = better and bigger) |
+
+### Changing the music
+
+`node intro-music.mjs` writes every option that was tried to `out/intro-music/` as WAV, to listen to them:
+`a`–`f` are six different styles, `e1`–`e5` are endings of the marimba build, `o1` and `o2` are outros. Pass the short
+names to write only some of them (`node intro-music.mjs e2 o2`). In use are `e2` (intro) and `o2` (outro); to switch,
+change `INTRO_MUSIC` and `OUTRO_MUSIC` at the top of `add-music.mjs`.
 
 ## Per-video graphics
 
