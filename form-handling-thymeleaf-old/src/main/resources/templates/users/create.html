@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <meta charset="UTF-8">
+    <title>Users</title>
+</head>
+<body>
+<main layout:fragment="content">
+    <div class="container">
+        <h1>Create user</h1>
+        <form th:object="${formData}"
+              th:action="@{/users/create}"
+              method="post"
+        class="d-flex flex-column gap-4">
+            <div>
+                <label for="givenName" class="form-label">Given name</label>
+                <input id="givenName" class="form-control" type="text"
+                       th:field="*{givenName}">
+                <p th:if="${#fields.hasErrors('givenName')}"
+                   th:text="${#strings.listJoin(#fields.errors('givenName'), ', ')}"
+                   class="text-danger"
+                ></p>
+            </div>
+            <div>
+                <label for="familyName" class="form-label">Family name</label>
+                <input id="familyName" class="form-control" type="text"
+                       th:field="*{familyName}">
+                <p th:if="${#fields.hasErrors('familyName')}"
+                   th:text="${#strings.listJoin(#fields.errors('familyName'), ', ')}"
+                   class="text-danger"
+                ></p>
+            </div>
+            <div>
+                <button type="submit" class="btn btn-primary">Create user</button>
+            </div>
+        </form>
+    </div>
+</main>
+</body>
+</html>
