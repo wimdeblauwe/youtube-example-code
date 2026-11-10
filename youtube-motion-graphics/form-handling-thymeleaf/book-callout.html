@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Book callout</title>
+<!--
+  Transparent overlay for take-29 (full-frame camera): the Taming Thymeleaf cover on the right
+  while "check out my book, Taming Thymeleaf ... It has clear examples ..." is said.
+  Clip time follows the finished video: take-29 18.2 → 20.37, then (cut) 24.44 → 27.08.
+  Open in a browser to preview (click to replay); add ?bg to see it over the camera frame.
+-->
+<style>
+  @font-face { font-family: "Barlow"; font-weight: 800; src: url("../assets/fonts/barlow-800.woff2") format("woff2"); }
+  @font-face { font-family: "Geist Mono"; font-weight: 500; src: url("../assets/fonts/geist-mono-500.woff2") format("woff2"); }
+  :root { --navy: #13202f; --copper: #c2702e; --copper-bright: #e08a4e; --on-navy: #f0ece5; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+  body.bg { background: url("../out/stills/t29-cam.png") 0 0 / 1920px 1080px; }
+  .abs { position: absolute; }
+  #glow { left: 1300px; top: 120px; width: 720px; height: 760px; border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(224,138,78,.45), rgba(224,138,78,.12) 55%, transparent); }
+  #book { left: 1490px; top: 140px; width: 360px; height: 470px; perspective: 1400px; }
+  #cover { position: absolute; inset: 0; border-radius: 6px; overflow: hidden; transform-origin: 50% 50%;
+    box-shadow: 0 40px 70px -20px rgba(0,0,0,.65), 0 0 0 1px rgba(255,255,255,.08); }
+  #cover img { width: 100%; height: 100%; display: block; }
+  #sweep { position: absolute; top: -10%; bottom: -10%; left: 0; width: 140px;
+    background: linear-gradient(90deg, transparent, rgba(255,240,225,.55), transparent); }
+  #card { left: 1460px; width: 420px; top: 650px; padding: 20px 26px 22px; border-radius: 16px;
+    background: rgba(19,32,47,.92); box-shadow: 0 24px 50px -18px rgba(0,0,0,.6); color: var(--on-navy); }
+  #card h3 { font: 800 40px/1.02 "Barlow"; letter-spacing: -.03em; }
+  #card h3 em { font-style: normal; color: var(--copper-bright); }
+  #card .k { margin-top: 10px; font: 500 15px "Geist Mono"; letter-spacing: .14em; color: rgba(240,236,229,.62); }
+  #url { margin-top: 14px; display: inline-block; padding: 6px 12px; border-radius: 8px;
+    background: var(--copper); color: #fff; font: 500 16px "Geist Mono"; }
+</style>
+</head>
+<body>
+<div id="glow" class="abs"></div>
+<div id="book" class="abs"><div id="cover"><img src="../assets/taming-thymeleaf-cover.png" alt=""><div id="sweep"></div></div></div>
+<div id="card" class="abs">
+  <h3>Taming <em>Thymeleaf</em></h3>
+  <div class="k">4TH EDITION · SPRING BOOT 4</div>
+  <div id="url">leanpub.com/taming-thymeleaf</div>
+</div>
+<script>
+(() => {
+  const params = new URLSearchParams(location.search);
+  if (params.has('bg')) document.body.classList.add('bg');
+  // take-29 seconds → clip ms (the 20.37–24.44 stretch is cut)
+  const T = (t) => Math.round((t <= 20.37 ? t - 18.2 : 2.17 + t - 24.44) * 1000);
+  window.CLIP_DURATION = T(27.08);
+  const out = 'cubic-bezier(0.23, 1, 0.32, 1)', inOut = 'cubic-bezier(0.65, 0, 0.35, 1)';
+  const $ = (id) => document.getElementById(id);
+  const anim = (el, kf, start, dur, easing = out, fill = 'both') => el.animate(kf, { delay: start, duration: dur, easing, fill });
+  const tExit = window.CLIP_DURATION - 450;
+
+  // "my book": glow breathes in, the cover swings in from the right and settles at a slight angle
+  anim($('glow'), [{ opacity: 0, transform: 'scale(.7)' }, { opacity: 1, transform: 'scale(1)' }], T(18.6), 700, 'ease-out');
+  anim($('cover'), [
+    { transform: 'translateX(220px) rotateY(-55deg) rotateZ(4deg)', opacity: 0 },
+    { opacity: 1, offset: .35 },
+    { transform: 'translateX(0) rotateY(-14deg) rotateZ(0deg)', opacity: 1 }], T(18.7), 800);
+  // gentle float while it is on screen
+  anim($('cover'), [{ transform: 'translateX(0) rotateY(-14deg) translateY(0)' },
+    { transform: 'translateX(0) rotateY(-10deg) translateY(-8px)' }], T(18.7) + 800, tExit - T(18.7) - 800, 'ease-in-out', 'forwards');
+  // "Taming Thymeleaf": light sweeps across the cover, title card rises
+  anim($('sweep'), [{ transform: 'translateX(-160px) skewX(-18deg)' }, { transform: 'translateX(460px) skewX(-18deg)' }], T(19.09), 700, inOut);
+  anim($('card'), [{ opacity: 0, transform: 'translateY(30px)' }, { opacity: 1, transform: 'none' }], T(19.09), 600);
+  // "clear examples": the link appears
+  anim($('url'), [{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }], T(24.69), 450);
+  // exit
+  [$('glow'), $('book'), $('card')].forEach((e) => anim(e, [{ opacity: 1 }, { opacity: 0 }], tExit, 450, 'ease-in', 'forwards'));
+
+  const all = () => document.getAnimations();
+  window.seek = (ms) => all().forEach((a) => { a.pause(); a.currentTime = ms; });
+  const img = document.querySelector('#cover img');
+  window.ready = Promise.all([document.fonts.ready, img.decode()]).then(async () => {
+    await Promise.all([...document.fonts].map((f) => f.load()));
+    if (params.has('render')) { window.seek(0); return; }
+    if (params.has('t')) { window.seek(Number(params.get('t'))); return; }
+    document.body.addEventListener('click', () => all().forEach((a) => { a.currentTime = 0; a.play(); }));
+  });
+})();
+</script>
+</body>
+</html>

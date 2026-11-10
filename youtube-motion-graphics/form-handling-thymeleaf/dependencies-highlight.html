@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dependencies highlight</title>
+<!--
+  Transparent overlay for take-10 (start.spring.io): highlights Spring Web, Thymeleaf and Validation
+  as they are named. 1920x1080 = the 3840x2160 screen recording at half size.
+  Clip time 0 = take-10 at 4.5 s. T(t) maps take seconds to clip ms.
+  Open in a browser to preview (click to replay); add ?bg to see it over the reference frame.
+-->
+<style>
+  :root { --copper: #c2702e; --copper-bright: #e08a4e; --navy: #13202f; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+  body.bg { background: url("../out/stills/t10-raw.png") 0 0 / 1920px 1080px; }
+  #spot { position: absolute; border-radius: 14px; box-shadow: 0 0 0 4000px rgba(19,32,47,.32); }
+  .hl { position: absolute; border-radius: 12px; overflow: hidden;
+    border: 3px solid var(--copper); background: rgba(224,138,78,.07); }
+  .hl .sweep { position: absolute; top: 0; bottom: 0; left: 0; width: 180px;
+    background: linear-gradient(90deg, transparent, rgba(224,138,78,.38), transparent); }
+  .glow { position: absolute; border-radius: 14px; }
+  .dia { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; }
+  .dia i { position: absolute; inset: 0; background: var(--copper); border-radius: 22%;
+    box-shadow: 0 0 16px 3px rgba(224,138,78,.55); }
+</style>
+</head>
+<body>
+<script>
+(() => {
+  const params = new URLSearchParams(location.search);
+  if (params.has('bg')) document.body.classList.add('bg');
+  const T = (t) => Math.round((t - 4.5) * 1000);
+  window.CLIP_DURATION = T(9.8);
+  const out = 'cubic-bezier(0.23, 1, 0.32, 1)', inOut = 'cubic-bezier(0.65, 0, 0.35, 1)';
+  const anim = (el, kf, start, dur, easing = out, fill = 'both') => el.animate(kf, { delay: start, duration: dur, easing, fill });
+  const div = (cls, s) => { const d = document.createElement('div'); d.className = cls; Object.assign(d.style, s); document.body.append(d); return d; };
+  const px = (r) => ({ left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' });
+
+  // Dependency rows in the 1920x1080 frame (measured from the recording)
+  const rows = [
+    { x: 982, y: 302, w: 720, h: 92, t: 5.05 },  // Spring Web
+    { x: 982, y: 400, w: 720, h: 96, t: 5.93 },  // Thymeleaf
+    { x: 982, y: 502, w: 720, h: 74, t: 6.89 },  // Validation
+  ];
+  const tOut = T(9.0);
+
+  // Spotlight on the dependency list
+  const spot = div('', px({ x: 970, y: 292, w: 744, h: 296 })); spot.id = 'spot';
+  anim(spot, [{ opacity: 0 }, { opacity: 1 }], T(4.6), 450, 'ease-out');
+  anim(spot, [{ opacity: 1 }, { opacity: 0 }], tOut, 600, 'ease-in-out', 'forwards');
+
+  rows.forEach((r) => {
+    const t = T(r.t) - 60;
+    const glow = div('glow', px({ x: r.x - 3, y: r.y - 3, w: r.w + 6, h: r.h + 6 }));
+    const hl = div('hl', px(r));
+    const sweep = document.createElement('div'); sweep.className = 'sweep'; hl.append(sweep);
+    // outline draws open from the left while a light bar sweeps across
+    anim(hl, [{ clipPath: 'inset(-4px 100% -4px -4px)', opacity: 1 }, { clipPath: 'inset(-4px 0% -4px -4px)', opacity: 1 }], t, 420, inOut);
+    anim(sweep, [{ transform: 'translateX(-200px)', opacity: 1 }, { transform: `translateX(${r.w}px)`, opacity: 0 }], t + 80, 650, inOut);
+    // a soft halo when named, settling to a calm state
+    anim(glow, [{ boxShadow: '0 0 0 0 rgba(224,138,78,.0)' }, { boxShadow: '0 0 0 10px rgba(224,138,78,.28)', offset: .3 },
+                { boxShadow: '0 0 0 4px rgba(224,138,78,.12)' }], t, 900, 'ease-out');
+    // "Dependencies": all three pulse together, then everything fades out
+    anim(glow, [{ boxShadow: '0 0 0 4px rgba(224,138,78,.12)' }, { boxShadow: '0 0 0 9px rgba(224,138,78,.26)' },
+                { boxShadow: '0 0 0 4px rgba(224,138,78,.12)' }], T(7.6), 700, 'ease-in-out', 'forwards');
+    [hl, glow].forEach((e) => anim(e, [{ opacity: 1 }, { opacity: 0 }], tOut, 600, 'ease-in-out', 'forwards'));
+  });
+
+  const all = () => document.getAnimations();
+  window.seek = (ms) => all().forEach((a) => { a.pause(); a.currentTime = ms; });
+  window.ready = Promise.resolve().then(() => {
+    if (params.has('render')) { window.seek(0); return; }
+    if (params.has('t')) { window.seek(Number(params.get('t'))); return; }
+    document.body.addEventListener('click', () => all().forEach((a) => { a.currentTime = 0; a.play(); }));
+  });
+})();
+</script>
+</body>
+</html>

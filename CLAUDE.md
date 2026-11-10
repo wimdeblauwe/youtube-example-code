@@ -12,9 +12,9 @@ Assets for the videos (intro motion graphics, thumbnails, renders, …) are not 
 
 Write generated video assets there, not into this repository. If that folder is not accessible (macOS privacy permissions), render locally and the user copies the file over.
 
-## YouTube intro
+## YouTube motion graphics
 
-`youtube-intro/` contains the sources of the video intro (HTML/CSS animation + a Playwright/ffmpeg renderer). It is not a Spring Boot project. To make the intro for a new episode, follow `youtube-intro/README.md` (`node render.mjs --title "… *Highlighted*"`).
+`youtube-motion-graphics/` contains the sources of the video intro and of the per-video motion graphics (HTML/CSS animations + Playwright/ffmpeg renderers). It is not a Spring Boot project. To make the intro for a new episode, follow `youtube-motion-graphics/README.md` (`node render.mjs --title "… *Highlighted*"`). Graphics for one video go in a subdirectory named after that video's project, e.g. `youtube-motion-graphics/form-handling-thymeleaf/`.
 
 ## Visual style
 

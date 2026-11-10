@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Form submission flow</title>
+<!--
+  Motion graphic for the chapter "How form submission works" (Form handling with Thymeleaf).
+  1728x1118 = the aspect of the screen recording (1728x1117), so Wrap can show it in the
+  screen's frame (place: screen) with the squircle camera on top in the bottom right.
+  Keep the bottom-right corner (x > 1450, y > 738) free: the camera sits there.
+
+  Clip time 0 = start of the chapter (take-4 at 0.8184 s). Every beat is keyed to a word
+  with T(take, takeSeconds), which maps take time to clip time using the kept ranges below.
+  Open directly in a browser to preview (click to replay); render-form-submission.mjs (next to this file) renders it.
+-->
+<style>
+  @font-face { font-family: "Barlow"; font-weight: 700; src: url("../assets/fonts/barlow-700.woff2") format("woff2"); }
+  @font-face { font-family: "Barlow"; font-weight: 800; src: url("../assets/fonts/barlow-800.woff2") format("woff2"); }
+  @font-face { font-family: "Geist Mono"; font-weight: 400; src: url("../assets/fonts/geist-mono-400.woff2") format("woff2"); }
+  @font-face { font-family: "Geist Mono"; font-weight: 500; src: url("../assets/fonts/geist-mono-500.woff2") format("woff2"); }
+  @font-face { font-family: "Hanken Grotesk"; font-weight: 500; src: url("../assets/fonts/hanken-grotesk-500.woff2") format("woff2"); }
+  @font-face { font-family: "Hanken Grotesk"; font-weight: 600; src: url("../assets/fonts/hanken-grotesk-600.woff2") format("woff2"); }
+
+  :root {
+    --navy: #13202f; --navy-soft: #1c2d40; --navy-line: #2b4058;
+    --copper: #c2702e; --copper-bright: #e08a4e;
+    --on-navy: #f0ece5; --muted: rgba(240,236,229,.58);
+    --paper: #faf9f5; --ink: #13202f;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1728px; height: 1118px; overflow: hidden; background: var(--navy); }
+  #stage { position: relative; width: 1728px; height: 1118px; overflow: hidden;
+    background: linear-gradient(115deg, var(--navy) 0%, var(--navy-soft) 70%, #27405a 100%);
+    font-family: "Hanken Grotesk", sans-serif; color: var(--on-navy); }
+  #glow { position: absolute; inset: 0; background: radial-gradient(ellipse 60% 90% at 85% 5%, rgba(224,138,78,.18), transparent 60%); }
+  #grain { position: absolute; inset: 0; opacity: .05; mix-blend-mode: overlay; pointer-events: none; z-index: 50;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .abs { position: absolute; }
+
+  /* the copper diamond motif; centred on its left/top */
+  .dia { position: absolute; z-index: 5; }
+  .dia i { position: absolute; inset: 0; background: var(--copper); border-radius: 22%;
+    transform: rotate(45deg) scale(.72); box-shadow: 0 0 40px 6px rgba(224,138,78,.3); }
+
+  #title { position: absolute; transform: translateY(-50%); white-space: nowrap; z-index: 6;
+    font-family: "Barlow"; font-weight: 800; letter-spacing: -.035em; line-height: 1.04; }
+  #title em { font-style: normal; color: var(--copper-bright); }
+  #title .w { display: inline-block; }
+  #kicker { left: 112px; top: 92px; font: 500 15px "Geist Mono"; letter-spacing: .14em; color: var(--muted); }
+
+  .part { position: absolute; top: 146px; height: 68px; border-radius: 14px; z-index: 3;
+    border: 2px solid rgba(224,138,78,.55); background: #182a3d;
+    display: flex; align-items: center; padding: 0 26px 0 50px; white-space: nowrap;
+    font: 700 30px "Barlow"; letter-spacing: -.01em; }
+  .life { position: absolute; top: 214px; height: 850px; width: 2px; z-index: 1;
+    background: repeating-linear-gradient(to bottom, rgba(240,236,229,.26) 0 10px, transparent 10px 20px); }
+
+  .arrow { position: absolute; height: 24px; z-index: 2; }
+  .arrow .line { position: absolute; top: 10px; height: 3px; border-radius: 2px; background: var(--on-navy); }
+  .arrow.resp .line { background: repeating-linear-gradient(90deg, var(--on-navy) 0 12px, transparent 12px 21px); }
+  .arrow .head { position: absolute; top: 2px; width: 18px; height: 20px; background: var(--on-navy); }
+  .arrow.r .head { clip-path: polygon(0 0, 100% 50%, 0 100%); }
+  .arrow.l .head { clip-path: polygon(100% 0, 0 50%, 100% 100%); }
+  .pkt { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; z-index: 4; }
+  .pkt i { position: absolute; inset: 0; background: var(--copper-bright); border-radius: 22%; transform: rotate(45deg);
+    box-shadow: 0 0 22px 6px rgba(224,138,78,.55); }
+  .ring { position: absolute; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; z-index: 4;
+    border: 3px solid var(--copper-bright); }
+
+  .lbl { position: absolute; transform: translateX(-50%); white-space: nowrap; z-index: 3;
+    font: 500 22px "Geist Mono"; color: var(--on-navy); }
+  .lbl span { display: inline-block; white-space: pre; }
+  .lbl .m { color: var(--copper-bright); }
+  .lbl .mut { color: var(--muted); }
+  .chip { display: inline-flex !important; align-items: center; gap: 8px; margin-left: 12px; padding: 2px 10px 2px 8px;
+    border-radius: 7px; background: var(--paper); color: var(--ink); font: 600 16px "Hanken Grotesk"; vertical-align: 3px; }
+  .chip b { width: 16px; height: 12px; border: 2px solid var(--ink); border-radius: 2px; position: relative; }
+  .chip b::after { content: ""; position: absolute; left: 2px; right: 2px; top: 3px; height: 2px; background: var(--ink); }
+  .badge { position: absolute; z-index: 3; padding: 6px 14px; border-radius: 999px; white-space: nowrap;
+    border: 1.5px solid rgba(224,138,78,.7); background: #182a3d; font: 500 18px "Geist Mono"; color: var(--on-navy); }
+  .badge .m { color: var(--copper-bright); }
+
+  /* browser windows (form + list) */
+  .win { position: absolute; left: 62px; width: 344px; z-index: 3; border-radius: 12px; overflow: hidden;
+    background: var(--paper); color: var(--ink); box-shadow: 0 24px 50px -18px rgba(0,0,0,.65); }
+  .win .bar { height: 34px; background: #ebe7de; display: flex; align-items: center; gap: 6px; padding: 0 12px; }
+  .win .bar i { width: 9px; height: 9px; border-radius: 50%; background: #c9c2b5; }
+  .win .bar span { margin-left: 10px; flex: 1; height: 22px; border-radius: 6px; background: var(--paper);
+    font: 400 13px/22px "Geist Mono"; padding: 0 10px; color: #4a5664; }
+  .win .body { padding: 16px 20px 20px; }
+  .win h4 { font: 700 22px "Barlow"; letter-spacing: -.01em; margin-bottom: 10px; }
+  .fld { margin-bottom: 10px; }
+  .fld label { display: block; font: 500 13px "Hanken Grotesk"; color: #5b6673; margin-bottom: 4px; }
+  .fld .in { height: 36px; border: 1.5px solid #c9c2b5; border-radius: 8px; padding: 0 12px;
+    font: 600 18px/33px "Hanken Grotesk"; position: relative; }
+  .fld .in span { display: inline-block; }
+  .btn { display: inline-block; margin-top: 4px; padding: 8px 20px; border-radius: 8px; background: var(--copper);
+    color: #fff; font: 600 16px "Hanken Grotesk"; }
+  .conn { position: absolute; height: 2px; z-index: 1;
+    background: repeating-linear-gradient(90deg, rgba(240,236,229,.45) 0 6px, transparent 6px 12px); }
+  .row { display: flex; align-items: center; justify-content: space-between; height: 38px; padding: 0 12px; margin: 0 -12px;
+    border-top: 1px solid #e3ded3; font: 500 17px "Hanken Grotesk"; border-radius: 6px; }
+  .row.new { font-weight: 600; }
+  .row .tag { font: 500 12px "Geist Mono"; letter-spacing: .08em; color: #fff; background: var(--copper);
+    border-radius: 5px; padding: 2px 7px; }
+
+  #dim { position: absolute; inset: 0; z-index: 20; background: radial-gradient(ellipse 70% 55% at 50% 45%, rgba(15,26,38,.97), rgba(15,26,38,.88)); }
+  #banner { position: absolute; left: 0; right: 0; top: 380px; z-index: 21; text-align: center; }
+  #banner .k { font: 500 22px "Geist Mono"; letter-spacing: .16em; color: var(--muted); margin-bottom: 18px; }
+  #banner .big { font: 800 112px "Barlow"; letter-spacing: -.035em; line-height: 1.05; white-space: nowrap; }
+  #banner .big span { display: inline-block; }
+  #banner .big .sep { color: var(--copper-bright); margin: 0 .16em; }
+  #banner .rule { width: 0; height: 4px; margin: 26px auto 0; border-radius: 2px; background: var(--copper-bright);
+    box-shadow: 0 0 30px 4px rgba(224,138,78,.45); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="glow"></div>
+  <div id="kicker" class="abs">SEQUENCE DIAGRAM</div>
+  <div id="title"><span class="w">How</span> <span class="w">form</span> <span class="w"><em>submission</em></span> <span class="w">works</span></div>
+  <div id="grain"></div>
+</div>
+
+<script>
+(() => {
+  const params = new URLSearchParams(location.search);
+  const RENDER = params.has('render');
+  const stage = document.getElementById('stage');
+  const $ = (id) => document.getElementById(id);
+
+  // Kept ranges of each take in the chapter: [first kept take second, clip second where it starts]
+  const SEG = { 4: [0.8184, 0], 5: [1.57, 13.7571], 6: [1.6959, 43.8529], 8: [0.85, 61.7286] };
+  const T = (take, t) => Math.round((SEG[take][1] + t - SEG[take][0]) * 1000);
+  window.CLIP_DURATION = T(8, 4.52) + 200;
+
+  const ease = { out: 'cubic-bezier(0.23, 1, 0.32, 1)', inOut: 'cubic-bezier(0.65, 0, 0.35, 1)', in: 'cubic-bezier(0.55, 0, 1, 0.45)' };
+  // fill 'both' hides/holds the first keyframe before the start; later animations on the same property use 'forwards'
+  const anim = (el, kf, start, dur, easing = ease.out, fill = 'both') =>
+    el.animate(kf, { delay: start, duration: dur, easing, fill });
+  const el = (tag, cls, parent = stage, html) => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (html !== undefined) e.innerHTML = html;
+    parent.append(e);
+    return e;
+  };
+  const place = (e, s) => { for (const k in s) e.style[k] = typeof s[k] === 'number' ? s[k] + 'px' : s[k]; return e; };
+  const rise = (e, start, dy = 12, dur = 450) =>
+    anim(e, [{ opacity: 0, transform: `translateY(${dy}px)` }, { opacity: 1, transform: 'none' }], start, dur);
+  const pulse = (e, start, color = 'rgba(224,138,78,.75)') =>
+    anim(e, [{ boxShadow: `0 0 0 0 ${color}` }, { boxShadow: `0 0 0 10px rgba(224,138,78,0)` }], start, 700, 'ease-out', 'none');
+  const diamond = (x, y, s) => { const d = el('div', 'dia'); el('i', '', d); return place(d, box(x, y, s)); };
+  const box = (x, y, s) => ({ left: x - s / 2 + 'px', top: y - s / 2 + 'px', width: s + 'px', height: s + 'px' });
+
+  const X = { browser: 520, backend: 960, db: 1340 };
+  const PY = 180; // participant centre line
+
+  function build() {
+    // ── Title (0 – 4.5s): diamond spins in, title words rise with the words, then it all shrinks into the header
+    const titleEl = $('title');
+    const head = diamond(864, 420, 96);
+    anim(head.firstChild, [
+      { transform: 'rotate(-270deg) scale(0)', opacity: 0 }, { opacity: 1, offset: .3 },
+      { transform: 'rotate(45deg) scale(.72)', opacity: 1 }], 0, 750);
+    anim($('glow'), [{ opacity: 0 }, { opacity: 1 }], 0, 900, 'ease-out');
+
+    const F0 = 124, F1 = 36;
+    titleEl.style.fontSize = F0 + 'px';
+    const w0 = titleEl.offsetWidth;
+    place(titleEl, { left: 864 - w0 / 2, top: 600 });
+    const words = [...titleEl.querySelectorAll('.w')];
+    [T(4, 2.04), T(4, 2.36), T(4, 2.76), T(4, 3.32)].forEach((t, i) =>
+      anim(words[i], [{ opacity: 0, transform: 'translateY(90px)' }, { opacity: 1, transform: 'none' }], t - 120, 650));
+    const tHead = T(4, 3.8);
+    anim(titleEl, [{ left: 864 - w0 / 2 + 'px', top: '600px', fontSize: F0 + 'px' },
+                   { left: '112px', top: '62px', fontSize: F1 + 'px' }], tHead, 800, ease.inOut, 'forwards');
+    anim(head, [box(864, 420, 96), box(84, 63, 26)], tHead, 800, ease.inOut, 'forwards');
+    rise($('kicker'), T(4, 4.04), 8);
+
+    // ── Participants: three diamonds on "three parties", each becomes a box on its name
+    const parts = {};
+    [['browser', 'Browser', T(4, 10.84)], ['backend', 'Spring Boot', T(4, 11.64)], ['db', 'Database', T(4, 13.64)]]
+      .forEach(([key, name, tName], i) => {
+        const x = X[key];
+        const p = el('div', 'part', stage, name);
+        const w = p.offsetWidth;
+        place(p, { left: x - w / 2 });
+        const d = diamond(x, PY, 52);
+        const tIn = T(4, 5.4) + i * 160;
+        anim(d.firstChild, [
+          { transform: 'rotate(-270deg) scale(0)', opacity: 0 }, { opacity: 1, offset: .3 },
+          { transform: 'rotate(45deg) scale(.72)', opacity: 1 }], tIn, 650);
+        // box wipes open from the centre while the diamond becomes its icon
+        anim(p, [{ clipPath: 'inset(-12px 50% -12px 50% round 14px)', opacity: 0 },
+                 { clipPath: 'inset(-12px 0% -12px 0% round 14px)', opacity: 1 }], tName, 600, ease.inOut);
+        anim(d, [box(x, PY, 52), box(x - w / 2 + 28, PY, 22)], tName, 600, ease.inOut, 'forwards');
+        const life = place(el('div', 'life'), { left: x - 1 });
+        anim(life, [{ clipPath: 'inset(0 0 100% 0)' }, { clipPath: 'inset(0 0 0% 0)' }], tName + 250, 900, ease.inOut);
+        parts[key] = { p, d };
+      });
+    // "saving something in the database": the database diamond nods
+    anim(parts.db.d.firstChild, [{ transform: 'rotate(45deg) scale(.72)' }, { transform: 'rotate(45deg) scale(.95)' },
+      { transform: 'rotate(45deg) scale(.72)' }], T(4, 9.72), 550, 'ease-in-out', 'none');
+
+    // ── Arrows
+    function arrow(from, to, y, start, dur, resp = false) {
+      const x1 = X[from], x2 = X[to], dir = Math.sign(x2 - x1);
+      const left = Math.min(x1, x2), w = Math.abs(x2 - x1);
+      const a = place(el('div', `arrow ${dir > 0 ? 'r' : 'l'}${resp ? ' resp' : ''}`), { left, top: y - 12, width: w });
+      place(el('div', 'line', a), dir > 0 ? { left: 0, right: 14 } : { left: 14, right: 0 });
+      place(el('div', 'head', a), dir > 0 ? { right: -2 } : { left: -2 });
+      const from0 = dir > 0 ? 'inset(-20px 100% -20px 0)' : 'inset(-20px 0 -20px 100%)';
+      anim(a, [{ clipPath: from0 }, { clipPath: 'inset(-20px 0 -20px 0)' }], start, dur, ease.inOut);
+      const pk = el('div', 'pkt'); el('i', '', pk);
+      anim(pk, [{ left: x1 + 'px', top: y + 'px', opacity: 0 }, { opacity: 1, offset: .08 },
+                { opacity: 1, offset: .9 }, { left: x2 + 'px', top: y + 'px', opacity: 0 }], start, dur + 80, ease.inOut);
+      const r = place(el('div', 'ring'), { left: x2, top: y });
+      anim(r, [{ transform: 'scale(.3)', opacity: 0 }, { transform: 'scale(.5)', opacity: 1, offset: .15 },
+               { transform: 'scale(1.7)', opacity: 0 }], start + dur - 60, 650, 'ease-out');
+      return a;
+    }
+    // label above an arrow; parts = [[html, cls, start]]
+    function label(from, to, y, pieces, dy = 46) {
+      const l = place(el('div', 'lbl'), { left: (X[from] + X[to]) / 2, top: y - dy });
+      return pieces.map(([html, cls, start]) => { const s = el('span', cls, l, html); rise(s, start); return s; });
+    }
+
+    // 1  GET /users/create
+    const y1 = 300;
+    pulse(parts.browser.p, T(5, 4.53));
+    arrow('browser', 'backend', y1, T(5, 5.49), 700);
+    label('browser', 'backend', y1, [['GET', 'm', T(5, 5.49)], [' /users', '', T(5, 8.69)], ['/create', '', T(5, 9.65)]]);
+
+    // 2  200 OK · HTML page + empty form
+    const y2 = 395;
+    pulse(parts.backend.p, T(5, 11.41));
+    arrow('backend', 'browser', y2, T(5, 12.61), 800, true);
+    label('browser', 'backend', y2, [['200 OK', 'm', T(5, 12.61)], [' · HTML', '', T(5, 13.09)],
+      ['<b></b>empty form', 'chip', T(5, 14.05)]]);
+
+    // the browser renders the form; the user fills it in and presses submit
+    const form = place(el('div', 'win', stage, `
+      <div class="bar"><i></i><i></i><i></i><span>/users/create</span></div>
+      <div class="body"><h4>Create user</h4>
+        <div class="fld"><label>Given name</label><div class="in"><span id="t1">Jane</span></div></div>
+        <div class="fld"><label>Family name</label><div class="in"><span id="t2">Doe</span></div></div>
+        <div class="btn" id="submit">Submit</div></div>`), { top: 340 });
+    const conn1 = place(el('div', 'conn'), { left: 406, width: 113, top: 455 });
+    const tForm = T(5, 16.93);
+    anim(form, [{ opacity: 0, transform: 'translateX(-24px) scale(.96)' }, { opacity: 1, transform: 'none' }], tForm, 550);
+    anim(conn1, [{ clipPath: 'inset(0 0 0 100%)' }, { clipPath: 'inset(0 0 0 0)' }], tForm - 150, 400, ease.inOut);
+    anim($('t1'), [{ clipPath: 'inset(-4px 100% -4px 0)' }, { clipPath: 'inset(-4px 0 -4px 0)' }], T(5, 18.37), 650, 'steps(4, end)');
+    anim($('t2'), [{ clipPath: 'inset(-4px 100% -4px 0)' }, { clipPath: 'inset(-4px 0 -4px 0)' }], T(5, 19.41), 500, 'steps(3, end)');
+    const btn = $('submit');
+    anim(btn, [{ boxShadow: '0 0 0 0 rgba(224,138,78,0)' }, { boxShadow: '0 0 0 5px rgba(224,138,78,.35)' }], T(5, 21.73), 300, 'ease-out');
+    anim(btn, [{ transform: 'scale(1)', background: '#c2702e' }, { transform: 'scale(.9)', background: '#a85d22', offset: .35 },
+               { transform: 'scale(1)', background: '#c2702e' }], T(5, 22.61), 350, 'ease-in-out', 'none');
+
+    // 3  POST /users/create
+    const y3 = 590;
+    arrow('browser', 'backend', y3, T(5, 23.81), 700);
+    label('browser', 'backend', y3, [['POST', 'm', T(5, 24.29)], [' /users/create', '', T(5, 24.61)]]);
+    const valid = place(el('div', 'badge', stage, '<span class="m">✓</span> no validation errors'), { left: 984, top: 527 });
+    rise(valid, T(5, 27.57), 8);
+
+    // 4  store in the database
+    const y4 = 680;
+    arrow('backend', 'db', y4, T(5, 29.57), 650);
+    label('backend', 'db', y4, [['store user', '', T(5, 29.89)]]);
+    pulse(parts.db.p, T(5, 31.01));
+    const row = place(el('div', 'badge', stage, '<span class="m">+1</span> user'), { left: 1360, top: 700 });
+    rise(row, T(5, 31.01), 8);
+
+    // 5  303 See Other + Location: /users
+    const y5 = 805;
+    anim(valid, [{ opacity: 1 }, { opacity: .45 }], T(6, 1.9), 400, 'ease-out', 'forwards');
+    arrow('backend', 'browser', y5, T(6, 2.68), 800, true);
+    const [code] = label('browser', 'backend', y5, [['303 See Other', 'm', T(6, 3.24)]], 82);
+    code.style.fontSize = '24px';
+    const [loc, locUrl] = label('browser', 'backend', y5, [['Location: ', 'mut', T(6, 5.64)], ['/users', '', T(6, 6.04)]], 46);
+    anim(locUrl, [{ color: '#f0ece5', textShadow: '0 0 0 rgba(224,138,78,0)' },
+                  { color: '#e08a4e', textShadow: '0 0 18px rgba(224,138,78,.8)' }], T(6, 10.2), 400, 'ease-out', 'forwards');
+    // "should redirect to": the arrowhead at the browser pulses
+    const rr = place(el('div', 'ring'), { left: X.browser, top: y5 });
+    anim(rr, [{ transform: 'scale(.4)', opacity: 0 }, { transform: 'scale(.6)', opacity: 1, offset: .15 },
+              { transform: 'scale(2)', opacity: 0 }], T(6, 8.36), 800, 'ease-out');
+
+    // 6  GET /users
+    const y6 = 905;
+    arrow('browser', 'backend', y6, T(6, 13.16), 700);
+    label('browser', 'backend', y6, [['GET', 'm', T(6, 13.16)], [' /users', '', T(6, 13.8)]]);
+
+    // 7  200 OK · list of users
+    const y7 = 1000;
+    arrow('backend', 'browser', y7, T(6, 15.56), 800, true);
+    label('browser', 'backend', y7, [['200 OK', 'm', T(6, 15.56)], [' · list of users', '', T(6, 16.28)]]);
+    const list = place(el('div', 'win', stage, `
+      <div class="bar"><i></i><i></i><i></i><span>/users</span></div>
+      <div class="body"><h4>Users</h4>
+        <div class="row" id="r1">Ada Lovelace</div>
+        <div class="row" id="r2">Alan Turing</div>
+        <div class="row new" id="r3">Jane Doe <span class="tag">NEW</span></div></div>`), { top: 800 });
+    const conn2 = place(el('div', 'conn'), { left: 406, width: 113, top: 1000 });
+    const tList = T(6, 16.28);
+    anim(list, [{ opacity: 0, transform: 'translateX(-24px) scale(.96)' }, { opacity: 1, transform: 'none' }], tList - 100, 550);
+    anim(conn2, [{ clipPath: 'inset(0 0 0 100%)' }, { clipPath: 'inset(0 0 0 0)' }], tList - 250, 400, ease.inOut);
+    rise($('r1'), T(6, 16.44), 8); rise($('r2'), T(6, 16.68), 8);
+    const r3 = $('r3');
+    anim(r3, [{ opacity: 0, transform: 'translateX(-30px)', background: 'rgba(224,138,78,0)' },
+              { opacity: 1, transform: 'none', background: 'rgba(224,138,78,.22)' }], T(6, 17.88), 550);
+    // form window steps back once the flow has moved on
+    anim(form, [{ opacity: 1 }, { opacity: .5 }], T(6, 2.4), 500, 'ease-out', 'forwards');
+
+    // ── GET-POST-REDIRECT banner
+    const dim = el('div', '', stage); dim.id = 'dim';
+    const banner = el('div', '', stage, `<div class="k">THIS WHOLE FLOW IS CALLED</div>
+      <div class="big"><span>GET</span><span class="sep">–</span><span>POST</span><span class="sep">–</span><span>REDIRECT</span></div>
+      <div class="rule"></div>`);
+    banner.id = 'banner';
+    const tB = T(8, 1.08);
+    anim(dim, [{ opacity: 0 }, { opacity: 1 }], tB, 500, 'ease-out');
+    rise(banner.querySelector('.k'), tB + 100, 10);
+    const bw = [...banner.querySelectorAll('.big span')];
+    [T(8, 2.76), T(8, 2.96), T(8, 3.15), T(8, 3.36), T(8, 3.55)].forEach((t, i) =>
+      anim(bw[i], [{ opacity: 0, transform: 'translateY(70px)' }, { opacity: 1, transform: 'none' }], t - 80, 600));
+    anim(banner.querySelector('.rule'), [{ width: '0px', opacity: 0 }, { width: '980px', opacity: 1 }], T(8, 3.75), 700, ease.inOut);
+  }
+
+  const all = () => document.getAnimations();
+  window.seek = (ms) => all().forEach((a) => { a.pause(); a.currentTime = ms; });
+  window.ready = document.fonts.ready.then(async () => {
+    await Promise.all([...document.fonts].map((f) => f.load()));
+    build();
+    if (RENDER) { window.seek(0); return; }
+    if (params.has('t')) { window.seek(Number(params.get('t'))); return; }
+    document.body.style.cursor = 'pointer';
+    document.body.addEventListener('click', () => all().forEach((a) => { a.currentTime = 0; a.play(); }));
+  });
+})();
+</script>
+</body>
+</html>
